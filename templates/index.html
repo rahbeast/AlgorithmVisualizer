@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Algorithm Visualizer - Pathfinding & Clustering</title>
+
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -326,6 +328,58 @@
             color: #424242;
         }
 
+        .tutorial-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 9999;
+        }
+
+        .tutorial-content {
+          background: white;
+          padding: 25px;
+          max-width: 600px;
+          border-radius: 10px;
+          text-align: left;
+          box-shadow: 0 0 20px rgba(0,0,0,0.5);
+          font-family: Arial, sans-serif;
+          position: relative;
+        }
+
+        .tutorial-buttons {
+          margin-top: 20px;
+          display: flex;
+          justify-content: space-between;
+        }
+
+        .tutorial-buttons button {
+          padding: 8px 14px;
+          background-color: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        .close-tutorial {
+          position: absolute;
+          top: 8px;
+          right: 10px;
+          background: none;
+          border: none;
+          color: #444;
+          font-size: 16px;
+          cursor: pointer;
+        }
+
+
         @media (max-width: 1200px) {
             .main-content {
                 flex-direction: column;
@@ -365,6 +419,18 @@
         }
     </style>
 </head>
+
+<div id="tutorialModal" class="tutorial-modal">
+  <div class="tutorial-content">
+    <div id="tutorialStep"></div>
+    <div class="tutorial-buttons">
+      <button onclick="prevStep()" id="prevBtn">⏮ Previous</button>
+      <button onclick="nextStep()" id="nextBtn">Next ⏭</button>
+    </div>
+    <button onclick="closeTutorial()" class="close-tutorial">Close ✖</button>
+  </div>
+</div>
+
 <body>
     <div class="container">
         <h1>Algorithm Visualizer</h1>
@@ -529,6 +595,74 @@
             </div>
         </div>
     </div>
+
+    <!-- 📘 TUTORIAL SCRIPT START -->
+<script>
+  const tutorialSteps = [
+    {
+      title: "👋 Welcome to Algorithm Visualizer!",
+      body: "This is an educational tool that helps you understand how pathfinding and clustering algorithms work step by step through interactive visualizations."
+    },
+    {
+      title: "🚦 Pathfinding Visualization",
+      body: "1. Click once on the grid to place a <span style='color:green;'>start</span> point.<br>2. Click again to place the <span style='color:red;'>end</span> point.<br>3. Click & drag to draw <span style='color:darkblue;'>walls</span>.<br>4. Select an algorithm and click <strong>Start Visualization</strong>."
+    },
+    {
+      title: "📊 K-Means Clustering",
+      body: "1. Click on the canvas to add data points or use <strong>Generate Random Points</strong>.<br>2. Set number of clusters (K) and max iterations.<br>3. Click <strong>Run K-Means</strong> and watch it group points into clusters."
+    },
+    {
+      title: "💡 Tips",
+      body: "• Use the <strong>Clear</strong> buttons to reset the canvas.<br>• Explanations will appear on the right during animations.<br>• You can revisit this tutorial later by refreshing "
+    }
+  ];
+
+  let currentTutorialStep = 0;
+
+  function showTutorialStep() {
+    const step = tutorialSteps[currentTutorialStep];
+    const stepDiv = document.getElementById("tutorialStep");
+    stepDiv.innerHTML = `<h2>${step.title}</h2><p>${step.body}</p>`;
+
+    document.getElementById("prevBtn").style.display = currentTutorialStep === 0 ? "none" : "inline-block";
+    document.getElementById("nextBtn").textContent = currentTutorialStep === tutorialSteps.length - 1 ? "Done ✅" : "Next ⏭";
+  }
+
+  function nextStep() {
+    if (currentTutorialStep < tutorialSteps.length - 1) {
+      currentTutorialStep++;
+      showTutorialStep();
+    } else {
+      closeTutorial();
+    }
+  }
+
+  function prevStep() {
+    if (currentTutorialStep > 0) {
+      currentTutorialStep--;
+      showTutorialStep();
+    }
+  }
+
+  function closeTutorial() {
+    document.getElementById("tutorialModal").style.display = "none";
+  }
+
+  window.addEventListener('load', () => {
+    currentTutorialStep = 0;
+    showTutorialStep();
+    document.getElementById("tutorialModal").style.display = "flex";
+  });
+</script>
+<!-- 📘 TUTORIAL SCRIPT END -->
+
+<!-- Now your existing script starts -->
+<script>
+  // Existing project JS (your full app logic)
+  let currentTab = 'pathfinding';
+  ...
+</script>
+
 
     <script>
         // Global variables
@@ -1043,4 +1177,5 @@
         setStatus('Click to place start point', 'info');
     </script>
 </body>
+
 </html>
