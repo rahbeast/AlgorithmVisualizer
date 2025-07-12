@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Algorithm Visualizer - Pathfinding & Clustering</title>
-
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -327,8 +325,7 @@
             font-size: 12px;
             color: #424242;
         }
-
-        .tutorial-modal {
+     .tutorial-modal {
           position: fixed;
           top: 0;
           left: 0;
@@ -378,7 +375,6 @@
           font-size: 16px;
           cursor: pointer;
         }
-
 
         @media (max-width: 1200px) {
             .main-content {
@@ -437,7 +433,7 @@
 
         <div class="algorithm-tabs">
             <button class="tab-btn active" onclick="switchTab('pathfinding')">Pathfinding Algorithms</button>
-            <button class="tab-btn" onclick="switchTab('clustering')">K-Means Clustering</button>
+            <button class="tab-btn" onclick="switchTab('clustering')">Clustering Algorithms</button>
         </div>
 
         <div class="main-content">
@@ -498,34 +494,38 @@
                     </div>
                 </div>
 
-                <!-- K-Means Section -->
+                <!-- Clustering Section -->
                 <div id="clustering" class="algorithm-section">
                     <div class="instructions">
-                        <h3>K-Means Instructions:</h3>
+                        <h3>Clustering Instructions:</h3>
                         <ol>
-                            <li>Set the number of clusters (K) and maximum iterations</li>
+                            <li>Choose between K-Means or Agglomerative clustering algorithm</li>
+                            <li>Set the number of clusters and parameters</li>
                             <li>Click on the canvas to add data points manually</li>
                             <li>Or use "Generate Random Points" to create sample data</li>
-                            <li>Click "Run K-Means" to start the clustering algorithm</li>
-                            <li>Watch as points get grouped into clusters iteratively</li>
+                            <li>Click "Run Algorithm" to start the clustering process</li>
+                            <li>Watch as points get grouped into clusters</li>
                             <li>Use "Clear Canvas" to start over</li>
                         </ol>
                     </div>
 
                     <div class="controls">
+                        <button class="algo-btn active" onclick="selectClusteringAlgorithm('kmeans')">K-Means</button>
+                        <button class="algo-btn" onclick="selectClusteringAlgorithm('agglomerative')">Agglomerative</button>
+
                         <div class="input-group">
-                            <label for="clusters">Clusters (K):</label>
+                            <label for="clusters">Clusters:</label>
                             <input type="number" id="clusters" value="3" min="1" max="8">
                         </div>
 
-                        <div class="input-group">
+                        <div class="input-group" id="maxIterGroup">
                             <label for="maxIter">Max Iterations:</label>
                             <input type="number" id="maxIter" value="10" min="1" max="50">
                         </div>
 
                         <button class="generate-btn" onclick="generateRandomPoints()">Generate Random Points</button>
-                        <button class="start-btn" onclick="runKMeans()">Run K-Means</button>
-                        <button class="clear-btn" onclick="clearKMeansCanvas()">Clear Canvas</button>
+                        <button class="start-btn" onclick="runClustering()">Run Algorithm</button>
+                        <button class="clear-btn" onclick="clearClusteringCanvas()">Clear Canvas</button>
                     </div>
 
                     <div class="progress-container">
@@ -595,7 +595,6 @@
             </div>
         </div>
     </div>
-
     <!-- 📘 TUTORIAL SCRIPT START -->
 <script>
   const tutorialSteps = [
@@ -608,8 +607,8 @@
       body: "1. Click once on the grid to place a <span style='color:green;'>start</span> point.<br>2. Click again to place the <span style='color:red;'>end</span> point.<br>3. Click & drag to draw <span style='color:darkblue;'>walls</span>.<br>4. Select an algorithm and click <strong>Start Visualization</strong>."
     },
     {
-      title: "📊 K-Means Clustering",
-      body: "1. Click on the canvas to add data points or use <strong>Generate Random Points</strong>.<br>2. Set number of clusters (K) and max iterations.<br>3. Click <strong>Run K-Means</strong> and watch it group points into clusters."
+      title: "📊 Clustering Algorithm",
+      body: "1. Click on the canvas to add data points or use <strong>Generate Random Points</strong>.<br>2. Set number of clusters (K) and max iterations.<br>3. Click <strong>Run K-Means or Agglomerative</strong> and watch it group points into clusters."
     },
     {
       title: "💡 Tips",
@@ -656,14 +655,6 @@
 </script>
 <!-- 📘 TUTORIAL SCRIPT END -->
 
-<!-- Now your existing script starts -->
-<script>
-  // Existing project JS (your full app logic)
-  let currentTab = 'pathfinding';
-  ...
-</script>
-
-
     <script>
         // Global variables
         let currentTab = 'pathfinding';
@@ -684,11 +675,12 @@
         let isDrawing = false;
         let currentPathfindingAlgorithm = 'dijkstra';
 
-        // K-Means variables
-        const kmeansCanvas = document.getElementById('kmeansCanvas');
-        const kmeansCtx = kmeansCanvas.getContext('2d');
-        let kmeansPoints = [];
+        // Clustering variables
+        const clusteringCanvas = document.getElementById('kmeansCanvas');
+        const clusteringCtx = clusteringCanvas.getContext('2d');
+        let clusteringPoints = [];
         let kmeansCentroids = [];
+        let currentClusteringAlgorithm = 'kmeans';
         const colors = ['#ff6b6b', '#00ff00', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd'];
 
         // Explanation functions
@@ -757,7 +749,7 @@
                 initPathfindingGrid();
             } else {
                 setStatus('Click on the canvas to add points or generate random points to get started', 'info');
-                clearKMeansCanvas();
+                clearClusteringCanvas();
             }
         }
 
@@ -952,98 +944,120 @@
             iterationText.textContent = `${current}/${total}`;
         }
 
+        function selectClusteringAlgorithm(algorithm) {
+            if (isRunning) return;
+            currentClusteringAlgorithm = algorithm;
+
+            // Update button styling
+            document.querySelectorAll('#clustering .algo-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Show/hide max iterations input for K-Means only
+            const maxIterGroup = document.getElementById('maxIterGroup');
+            if (algorithm === 'kmeans') {
+                maxIterGroup.style.display = 'flex';
+            } else {
+                maxIterGroup.style.display = 'none';
+            }
+
+            setStatus(`${algorithm === 'kmeans' ? 'K-Means' : 'Agglomerative'} clustering algorithm selected`, 'info');
+        }
+
         function generateRandomPoints() {
             if (isRunning) return;
 
-            kmeansPoints = [];
-            const numPoints = 50 + Math.floor(Math.random() * 50);
+            clusteringPoints = [];
+            const numPoints = 20 + Math.floor(Math.random() * 30);
 
             for (let i = 0; i < numPoints; i++) {
-                kmeansPoints.push({
-                    x: Math.random() * (kmeansCanvas.width - 40) + 20,
-                    y: Math.random() * (kmeansCanvas.height - 40) + 20,
+                clusteringPoints.push({
+                    x: Math.random() * (clusteringCanvas.width - 40) + 20,
+                    y: Math.random() * (clusteringCanvas.height - 40) + 20,
                     cluster: -1
                 });
             }
 
-            drawKMeansPoints();
-            setStatus(`Generated ${numPoints} random points. Click "Run K-Means" to cluster them.`, 'info');
+            drawClusteringPoints();
+            setStatus(`Generated ${numPoints} random points. Click "Run Algorithm" to cluster them.`, 'info');
         }
 
-        function clearKMeansCanvas() {
+        function clearClusteringCanvas() {
             if (isRunning) return;
-            kmeansPoints = [];
+            clusteringPoints = [];
             kmeansCentroids = [];
-            kmeansCtx.clearRect(0, 0, kmeansCanvas.width, kmeansCanvas.height);
+            clusteringCtx.clearRect(0, 0, clusteringCanvas.width, clusteringCanvas.height);
             updateProgress(0, 0);
             setStatus('Canvas cleared. Click to add points or generate random points.', 'info');
 
             // Reset explanations
             document.getElementById('explanationContent').innerHTML = `
                 <div class="step-explanation">
-                    <div class="step-title">K-Means Clustering</div>
-                    <div class="step-description">Add some data points and run K-Means to see how it groups similar data together.</div>
-                    <div class="step-details">K-Means finds the best way to partition data into K clusters by minimizing the distance within each cluster.</div>
+                    <div class="step-title">Clustering Algorithms</div>
+                    <div class="step-description">Add some data points and run clustering to see how algorithms group similar data together.</div>
+                    <div class="step-details">K-Means partitions data into K clusters, while Agglomerative builds hierarchical clusters from bottom-up.</div>
                 </div>
             `;
         }
 
-        function drawKMeansPoints() {
-            kmeansCtx.clearRect(0, 0, kmeansCanvas.width, kmeansCanvas.height);
+        function drawClusteringPoints() {
+            clusteringCtx.clearRect(0, 0, clusteringCanvas.width, clusteringCanvas.height);
 
             // Draw points
-            kmeansPoints.forEach(point => {
-                kmeansCtx.beginPath();
-                kmeansCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+            clusteringPoints.forEach(point => {
+                clusteringCtx.beginPath();
+                clusteringCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
 
                 if (point.cluster >= 0 && point.cluster < colors.length) {
-                    kmeansCtx.fillStyle = colors[point.cluster];
+                    clusteringCtx.fillStyle = colors[point.cluster];
                 } else {
-                    kmeansCtx.fillStyle = '#888888';
+                    clusteringCtx.fillStyle = '#888888';
                 }
 
-                kmeansCtx.fill();
-                kmeansCtx.strokeStyle = '#333';
-                kmeansCtx.lineWidth = 1;
-                kmeansCtx.stroke();
+                clusteringCtx.fill();
+                clusteringCtx.strokeStyle = '#333';
+                clusteringCtx.lineWidth = 1;
+                clusteringCtx.stroke();
             });
 
-            // Draw centroids
-            kmeansCentroids.forEach((centroid, index) => {
-                kmeansCtx.beginPath();
-                kmeansCtx.arc(centroid.x, centroid.y, 8, 0, 2 * Math.PI);
-                kmeansCtx.fillStyle = '#000000';
-                kmeansCtx.fill();
-                kmeansCtx.strokeStyle = '#fff';
-                kmeansCtx.lineWidth = 2;
-                kmeansCtx.stroke();
+            // Draw centroids (for K-Means only)
+            if (currentClusteringAlgorithm === 'kmeans') {
+                kmeansCentroids.forEach((centroid, index) => {
+                    clusteringCtx.beginPath();
+                    clusteringCtx.arc(centroid.x, centroid.y, 8, 0, 2 * Math.PI);
+                    clusteringCtx.fillStyle = '#000000';
+                    clusteringCtx.fill();
+                    clusteringCtx.strokeStyle = '#fff';
+                    clusteringCtx.lineWidth = 2;
+                    clusteringCtx.stroke();
 
-                // Draw X mark
-                kmeansCtx.strokeStyle = '#fff';
-                kmeansCtx.lineWidth = 3;
-                kmeansCtx.beginPath();
-                kmeansCtx.moveTo(centroid.x - 4, centroid.y - 4);
-                kmeansCtx.lineTo(centroid.x + 4, centroid.y + 4);
-                kmeansCtx.moveTo(centroid.x + 4, centroid.y - 4);
-                kmeansCtx.lineTo(centroid.x - 4, centroid.y + 4);
-                kmeansCtx.stroke();
-            });
+                    // Draw X mark
+                    clusteringCtx.strokeStyle = '#fff';
+                    clusteringCtx.lineWidth = 3;
+                    clusteringCtx.beginPath();
+                    clusteringCtx.moveTo(centroid.x - 4, centroid.y - 4);
+                    clusteringCtx.lineTo(centroid.x + 4, centroid.y + 4);
+                    clusteringCtx.moveTo(centroid.x + 4, centroid.y - 4);
+                    clusteringCtx.lineTo(centroid.x - 4, centroid.y + 4);
+                    clusteringCtx.stroke();
+                });
+            }
         }
 
-        function getKMeansCanvasPosition(event) {
-            const rect = kmeansCanvas.getBoundingClientRect();
+        function getClusteringCanvasPosition(event) {
+            const rect = clusteringCanvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             return { x, y };
         }
 
-        async function runKMeans() {
+        async function runClustering() {
             if (isRunning) return;
 
             const k = parseInt(document.getElementById('clusters').value);
-            const maxIter = parseInt(document.getElementById('maxIter').value);
 
-            if (kmeansPoints.length === 0) {
+            if (clusteringPoints.length === 0) {
                 setStatus('No points to cluster! Add points by clicking on canvas or generate random points.', 'error');
                 return;
             }
@@ -1053,12 +1067,24 @@
                 return;
             }
 
-            if (k > kmeansPoints.length) {
+            if (k > clusteringPoints.length) {
                 setStatus('Number of clusters cannot exceed number of points.', 'error');
                 return;
             }
 
             isRunning = true;
+
+            if (currentClusteringAlgorithm === 'kmeans') {
+                await runKMeansAlgorithm(k);
+            } else {
+                await runAgglomerativeAlgorithm(k);
+            }
+
+            isRunning = false;
+        }
+
+        async function runKMeansAlgorithm(k) {
+            const maxIter = parseInt(document.getElementById('maxIter').value);
             setStatus('Running K-Means clustering...', 'info');
 
             try {
@@ -1068,7 +1094,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        points: kmeansPoints,
+                        points: clusteringPoints,
                         k: k,
                         max_iterations: maxIter
                     })
@@ -1086,7 +1112,36 @@
                 setStatus('Error: Make sure Flask server is running on port 5000', 'error');
             }
 
-            isRunning = false;
+            updateProgress(0, 0);
+        }
+
+        async function runAgglomerativeAlgorithm(k) {
+            setStatus('Running Agglomerative clustering...', 'info');
+
+            try {
+                const response = await fetch('/api/agglomerative', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        points: clusteringPoints,
+                        target_clusters: k
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    updateExplanations(result.explanations || []);
+                    await animateAgglomerative(result.merge_history);
+                    setStatus(result.message, 'success');
+                } else {
+                    setStatus(result.message, 'error');
+                }
+            } catch (error) {
+                setStatus('Error: Make sure Flask server is running on port 5000', 'error');
+            }
+
             updateProgress(0, 0);
         }
 
@@ -1097,7 +1152,7 @@
                 const iteration = iterations[i];
 
                 // Update point clusters
-                kmeansPoints.forEach(point => {
+                clusteringPoints.forEach(point => {
                     point.cluster = -1; // Reset
                     for (let j = 0; j < iteration.clusters.length; j++) {
                         if (iteration.clusters[j].find(p => p.x === point.x && p.y === point.y)) {
@@ -1110,7 +1165,7 @@
                 // Update centroids
                 kmeansCentroids = iteration.centroids;
 
-                drawKMeansPoints();
+                drawClusteringPoints();
 
                 // Advance to next explanation step
                 nextExplanationStep();
@@ -1119,6 +1174,46 @@
 
                 await new Promise(resolve => setTimeout(resolve, 800));
             }
+        }
+
+        async function animateAgglomerative(mergeHistory) {
+            // Start with initial state - each point is its own cluster
+            clusteringPoints.forEach((point, index) => {
+                point.cluster = index % colors.length;
+            });
+            drawClusteringPoints();
+
+            // Start explanations
+            nextExplanationStep(); // Initial state explanation
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            nextExplanationStep(); // Starting merges explanation
+
+            for (let i = 0; i < mergeHistory.length; i++) {
+                updateProgress(i + 1, mergeHistory.length);
+
+                const mergeStep = mergeHistory[i];
+
+                // Update point clusters based on current merge step
+                mergeStep.clusters.forEach((cluster, clusterIndex) => {
+                    cluster.forEach(point => {
+                        const originalPoint = clusteringPoints.find(p => p.x === point.x && p.y === point.y);
+                        if (originalPoint) {
+                            originalPoint.cluster = clusterIndex % colors.length;
+                        }
+                    });
+                });
+
+                drawClusteringPoints();
+
+                // Advance to next explanation step
+                nextExplanationStep();
+
+                await new Promise(resolve => setTimeout(resolve, 1200));
+            }
+
+            // Final explanation
+            nextExplanationStep();
         }
 
         // Event Listeners
@@ -1162,14 +1257,14 @@
             isDrawing = false;
         });
 
-        kmeansCanvas.addEventListener('click', (event) => {
+        clusteringCanvas.addEventListener('click', (event) => {
             if (isRunning || currentTab !== 'clustering') return;
 
-            const pos = getKMeansCanvasPosition(event);
-            kmeansPoints.push({ x: pos.x, y: pos.y, cluster: -1 });
-            drawKMeansPoints();
+            const pos = getClusteringCanvasPosition(event);
+            clusteringPoints.push({ x: pos.x, y: pos.y, cluster: -1 });
+            drawClusteringPoints();
 
-            setStatus(`Added point at (${Math.round(pos.x)}, ${Math.round(pos.y)}). Total points: ${kmeansPoints.length}`, 'info');
+            setStatus(`Added point at (${Math.round(pos.x)}, ${Math.round(pos.y)}). Total points: ${clusteringPoints.length}`, 'info');
         });
 
         // Initialize
@@ -1177,5 +1272,4 @@
         setStatus('Click to place start point', 'info');
     </script>
 </body>
-
 </html>

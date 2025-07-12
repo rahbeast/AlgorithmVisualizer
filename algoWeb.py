@@ -340,6 +340,100 @@ def kmeans_algorithm(points, k, max_iterations):
     return {"success": True, "iterations": iterations_data, "message": final_message, "explanations": explanations}
 
 
+def agglomerative_clustering_algorithm(points, target_clusters):
+    if len(points) < 2:
+        return {"success": False, "message": "Need at least 2 points for clustering", "explanations": []}
+
+    if target_clusters >= len(points):
+        return {"success": False, "message": "Target clusters must be less than number of points", "explanations": []}
+
+    # Initialize - each point is its own cluster
+    clusters = [[point] for point in points]
+    merge_history = []
+    explanations = []
+    step_counter = 1
+
+    explanations.append({
+        "step": step_counter,
+        "title": "🌳 Agglomerative Clustering Started",
+        "description": f"Starting with {len(points)} individual clusters, merging down to {target_clusters} final clusters.",
+        "details": "Agglomerative clustering uses a bottom-up approach: start with each point as its own cluster, then repeatedly merge the two closest clusters until reaching the desired number."
+    })
+    step_counter += 1
+
+    explanations.append({
+        "step": step_counter,
+        "title": "📊 Initial State",
+        "description": f"Each of the {len(points)} points starts as its own cluster (each with unique color).",
+        "details": "This hierarchical approach builds clusters by progressively combining the closest pairs, creating a tree-like structure of nested groupings."
+    })
+    step_counter += 1
+
+    merge_count = 0
+    while len(clusters) > target_clusters:
+        # Find the two closest clusters
+        min_distance = float('inf')
+        merge_indices = (0, 1)
+
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                # Calculate distance between clusters (complete linkage)
+                max_dist = 0
+                for point1 in clusters[i]:
+                    for point2 in clusters[j]:
+                        dist = np.sqrt((point1['x'] - point2['x']) ** 2 + (point1['y'] - point2['y']) ** 2)
+                        max_dist = max(max_dist, dist)
+
+                if max_dist < min_distance:
+                    min_distance = max_dist
+                    merge_indices = (i, j)
+
+        # Merge the closest clusters
+        i, j = merge_indices
+        merged_cluster = clusters[i] + clusters[j]
+
+        # Remove the old clusters and add the merged one
+        new_clusters = []
+        for k, cluster in enumerate(clusters):
+            if k != i and k != j:
+                new_clusters.append(cluster)
+        new_clusters.append(merged_cluster)
+        clusters = new_clusters
+
+        merge_count += 1
+
+        # Record this merge step
+        merge_history.append({
+            'clusters': [cluster.copy() for cluster in clusters],
+            'merged_indices': merge_indices,
+            'distance': min_distance,
+            'remaining_clusters': len(clusters)
+        })
+
+        explanations.append({
+            "step": step_counter,
+            "title": f"🔗 Merge {merge_count}: Combining Closest Clusters",
+            "description": f"Merged two closest clusters (distance: {min_distance:.1f}). Now have {len(clusters)} clusters remaining.",
+            "details": f"Used complete linkage: measured distance as the maximum distance between any two points in different clusters. This creates compact, spherical clusters."
+        })
+        step_counter += 1
+
+    explanations.append({
+        "step": step_counter,
+        "title": "✅ Clustering Complete!",
+        "description": f"Successfully created {target_clusters} final clusters through {merge_count} merge operations.",
+        "details": f"The hierarchical clustering process has formed {target_clusters} distinct groups. Each group contains points that were progressively determined to be most similar to each other."
+    })
+
+    return {
+        "success": True,
+        "merge_history": merge_history,
+        "final_clusters": clusters,
+        "message": f"Agglomerative clustering completed with {target_clusters} clusters",
+        "explanations": explanations
+    }
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -384,6 +478,22 @@ def run_kmeans():
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "message": "Error running K-Means"}), 500
+
+
+@app.route('/api/agglomerative', methods=['POST'])
+def run_agglomerative():
+    try:
+        data = request.get_json()
+        if not data or 'points' not in data:
+            return jsonify({"success": False, "message": "No points provided"}), 400
+
+        points = data['points']
+        target_clusters = data.get('target_clusters', 3)
+
+        result = agglomerative_clustering_algorithm(points, target_clusters)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "message": "Error running Agglomerative Clustering"}), 500
 
 
 if __name__ == '__main__':
